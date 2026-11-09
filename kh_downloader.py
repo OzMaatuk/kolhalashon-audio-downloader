@@ -1,18 +1,17 @@
 #!/usr/bin/env python3
 """Download the audio-only (.mp3) version of a rav's lessons from kolhalashon.com.
 
-URL https://www.kolhalashon.com/he/regularSite/ravs/140/1/1  ->  rav 140, page 1.
+Site URL .../ravs/140/1/1 means rav 140, page 1.
 Listing needs no login; downloading does (credentials via .env, flags, or prompt).
 """
 import argparse
 import getpass
+import json
 import os
 import re
 import sys
 import time
 from pathlib import Path
-from urllib.parse import parse_qs, urlparse
-import json
 
 import requests
 
@@ -49,13 +48,11 @@ HEADERS = {
 def parse_args():
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0],
                                 formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    p.add_argument("--url", help="Rav page URL copied from the site (sets rav, page and --order)")
-    p.add_argument("--rav", type=int, default=None, help="Rav ID from the site URL [140]")
-    p.add_argument("--start-page", type=int, default=None, help="First website page to read [1]")
-    p.add_argument("--order", type=int, default=None,
-                   help="Sort order number (the site's orderBy=N) [7]")
+    p.add_argument("--rav", type=int, default=140, help="Rav ID from the site URL")
+    p.add_argument("--start-page", type=int, default=1, help="First website page to read")
+    p.add_argument("--order", type=int, default=7, help="Sort order number (the site's orderBy=N)")
     p.add_argument("--filters-json", default=os.getenv("KH_FILTERS_JSON"),
-                   help="Raw FiltersArray JSON copied from the browser request; see README")
+                   help="FiltersArray JSON copied from the browser request; see README")
     p.add_argument("--pages", type=int, default=1, help="How many website pages to read")
     p.add_argument("--all", action="store_true", help="Read all pages (ignores --pages)")
     p.add_argument("--limit", type=int, help="Max number of lessons to download")
@@ -71,25 +68,7 @@ def parse_args():
     p.add_argument("--username", default=os.getenv("KOL_HALASHON_USERNAME"))
     p.add_argument("--password", default=os.getenv("KOL_HALASHON_PASSWORD"))
     a = p.parse_args()
-    if a.url:
-        u = urlparse(a.url)
-        m = re.search(r"/ravs/(\d+)(?:/(\d+))?", u.path)
-        q = parse_qs(u.query)
-        if m:
-            a.rav = a.rav or int(m.group(1))
-            a.start_page = a.start_page or (int(m.group(2)) if m.group(2) else None)
-        if a.order is None and "orderBy" in q:
-            a.order = int(q["orderBy"][0])
-        if "urlFilters" in q and not a.filters_json:  # "6:5|25:18823|" -> API filter objects
-            pairs = [f.split(":") for f in q["urlFilters"][0].split("|") if ":" in f]
-            a.filters_json = json.dumps([
-                {"ResultType": int(t), "ResultId": int(i), "ResultParentId": None,
-                 "ResultString": None, "ResultOrder": None, "ActiveFilter": True}
-                for t, i in pairs])
-    a.rav, a.start_page, a.order = a.rav or 140, a.start_page or 1, a.order or 7
     a.filters = json.loads(a.filters_json) if a.filters_json else []
-    if a.filters:
-        print(f"Filters: {[(f.get('ResultType'), f.get('ResultId', f.get('ResultString'))) for f in a.filters]}")
     return a
 
 
@@ -214,9 +193,7 @@ def main():
     if not lessons:
         return
 
-    user = a.username or input("Username: ").strip()
-    pwd = a.password or getpass.getpass("Password: ")
-    login(s, user, pwd)
+    login(s, a.username or input("Username: ").strip(), a.password or getpass.getpass("Password: "))
 
     key_urls = [a.key_url] if a.key_url else list(KEY_URLS)
     out = Path(a.out)

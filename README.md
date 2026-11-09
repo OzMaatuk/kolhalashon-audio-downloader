@@ -38,23 +38,20 @@ python kh_downloader.py --rav 140 --all --limit 50   # all pages, stop at 50 les
 | `--retries` | 3 | Retries per file |
 | `--overwrite` | off | Re-download existing files |
 | `--site-key` | auto | `authorization-site-key` header value (or env `KH_SITE_KEY`) |
+| `--order` | 7 | Sort order (site's `orderBy`) |
+| `--filters-json` | none | `FiltersArray` JSON (or env `KH_FILTERS_JSON`) |
+| `--key-url` | auto | Download-key URL override (or env `KH_KEY_URL`) |
 | `--list-only` | off | List only |
 
 Files are named `DATE TITLE [fileId].mp3`.
 
 ## Filters and sorting
 
-Paste a URL from the site. Rav, page, sort order and filters are all taken from it:
+`--order N` is the site's `orderBy=N`. For filters, copy the `FiltersArray` from your browser (DevTools → Network → `WebSite_GetRavShiurim` → Payload) and pass it as JSON (or `KH_FILTERS_JSON` in `.env`):
 
 ```bash
-python kh_downloader.py --url "https://www.kolhalashon.com/en/regularSite/ravs/140?urlFilters=6:5%7C25:18823%7C&orderBy=9" --pages 5
+python kh_downloader.py --all --filters-json '[{"ResultType":1,"ResultString":"פרשת","ActiveFilter":true}]'
 ```
-
-- `orderBy=N` is sent as the API's `SearchOrder` (override with `--order N`).
-- `urlFilters=6:5|25:18823|` is read as `type:id` pairs and sent as `FiltersArray` objects (`ResultType`, `ResultId`).
-- Text filters (e.g. a search word such as `{"ResultType":1,"ResultString":"פרשת","ActiveFilter":true}`) are not in the URL. Pass them with `--filters-json '[...]'` (or `KH_FILTERS_JSON` in `.env`), copied from the `FiltersArray` in DevTools → Network → `WebSite_GetRavShiurim` → Payload. This replaces the filters taken from the URL.
-
-Run with `--list-only` first and compare with the website's list to confirm the filters took effect.
 
 ## If you get 403
 
